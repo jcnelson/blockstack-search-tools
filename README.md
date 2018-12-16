@@ -7,6 +7,8 @@ and is provided as-is.  I published it here to show an example of how to crawl
 the Blockstack network.  There are no plans to support it beyond its current
 state.
 
+All programs must be run in-place.
+
 ## Dependencies
 
 * The `dash` shell (it will NOT work with `bash`)
