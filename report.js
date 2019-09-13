@@ -12,7 +12,7 @@ if (!profile_analysis) {
 let analysis_data = []
 const analysis_batches = fs.readdirSync(profile_analysis).forEach((file) => {
   const data = fs.readFileSync(profile_analysis + '/' + file)
-  if (data.length > 0) {
+  if (!file.startsWith('.') && data.length > 0) {
     const dataJSON = JSON.parse(data)
     analysis_data = analysis_data.concat(dataJSON)
   }

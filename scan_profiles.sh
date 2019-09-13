@@ -4,7 +4,8 @@
 
 # tailor these directories to your needs
 WORK_DIR="./results"
-BLOCKSTACK_DIR="$HOME/.blockstack-server/"
+# BLOCKSTACK_DIR="$HOME/.blockstack-server/"
+BLOCKSTACK_DIR="$HOME/debian-testing/home/debian/.blockstack-server/"
 
 ALL_ZONEFILES="$WORK_DIR/all_zonefiles.txt"
 ALL_PROFILES="$WORK_DIR/all_profiles/"
@@ -51,30 +52,35 @@ get_profile_data() {
       return 1
    fi
 
-   echo "Get $ZFHASH $PROFILE_URL last-modified..."
-   LAST_MODIFIED="$(curl -sLf -D - -X HEAD -m 10 --connect-timeout 5 "$PROFILE_URL" | grep -i 'last-modified' | cut -d ' ' -f 3-100)"
+   LAST_MODIFIED="$(curl -sLf -I -m 10 --connect-timeout 5 "$PROFILE_URL" | grep -i 'last-modified' | cut -d ' ' -f 3-100 | tr -d '\r\n')"
    if [ $? -ne 0 ]; then 
       echo >&2 "Failed to HEAD $NAME $ZFHASH"
       return 1
    fi
 
-   echo "Get $ZFHASH $PROFILE_URL profile..."
+   echo "GET $ZFHASH $PROFILE_URL (last-modified: $LAST_MODIFIED) profile to $PROFILE_PATH..."
    curl -sLf -m 10 --connect-timeout 5 --expect100-timeout 5 "$PROFILE_URL" > "$PROFILE_PATH"
    if [ $? -ne 0 ]; then 
       rm "$PROFILE_PATH"
-      echo >&2 "Failed to resolve $NAME $ZFHASH"
+      echo >&2 "Failed to GET $NAME $ZFHASH"
       return 1
    fi
 
    echo "{\"name\": \"$BLOCKSTACK_ID\", \"address\": \"$ADDRESS\", \"last_modified\": \"$LAST_MODIFIED\", \"zonefile\": \"$ZFHASH\", \"profile_url\": \"$PROFILE_URL\", \"profile\": " > "$PROFILE_PATH.tmp"
    cat "$PROFILE_PATH" | jq '.[0].decodedToken.payload.claim' >> "$PROFILE_PATH.tmp" 2>/dev/null
+   if [ $? -ne 0 ]; then
+      cat "$PROFILE_PATH.tmp" 
+      rm "$PROFILE_PATH.tmp"
+      echo >&2 "Failed to parse profile token in $PROFILE_PATH.tmp"
+      return 1
+   fi
    echo "}" >> "$PROFILE_PATH.tmp"
 
-   # make sure it's JSON 
+   # make sure the whole thing is JSON 
    cat "$PROFILE_PATH.tmp" | jq >/dev/null 2>/dev/null
    if [ $? -ne 0 ]; then 
       rm "$PROFILE_PATH.tmp" "$PROFILE_PATH"
-      echo >&2 "Failed to store data for profile $PROFILE_PATH"
+      echo >&2 "Failed to store data for profile $PROFILE_PATH: Not JSON"
       return 1
    fi
 
